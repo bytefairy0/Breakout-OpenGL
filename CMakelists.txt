@@ -1,0 +1,14 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(OpenGLGame)
+
+find_package(glfw3 3.4 REQUIRED)
+
+set(ACTIVE_FILE "src/game.cpp")
+
+add_executable(OpenGLgame ${ACTIVE_FILE} src/glad.c src/stb_image.cpp)
+target_include_directories(OpenGLgame PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_link_libraries(OpenGLgame PRIVATE glfw ${CMAKE_DL_LIBS})
+
+find_package(OpenGL REQUIRED)
+target_link_libraries(OpenGLgame PRIVATE OpenGL::GL)
