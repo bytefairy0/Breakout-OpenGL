@@ -1,36 +1,90 @@
-#ifndef RESOURCE_MANAGER_H
-#define RESOURCE_MANAGER_H
+#include <resource_manager.h>
 
-#include <map>
-#include <string>
+#include <iostream>
+#include <sstream>
+#include <fstream>
 using namespace std;
 
-#include <glad/glad.h>
+#include <stb_image.h>
 
-#include "texture.h"
-#include "shader.h"
+map<string, Texture2D> ResourceManager::Textures;
+map<string, Shader> ResourceManager::Shaders;
 
-class ResourceManager{
-public:
-    static map<std::string, Shader>    Shaders;
-    static map<std::string, Texture2D> Textures;
+Shader ResourceManager::LoadShader(const char *vShaderFile, const char *fShaderFile, const char *gShaderFile, string name){
+    Shaders[name] = loadShaderFromFile(vShaderFile, fShaderFile, gShaderFile);
+    return Shaders[name];
+}
 
-    // loads ( shader program from file 
-    static Shader    LoadShader(const char *vShaderFile, const char *fShaderFile, const char *gShaderFile, std::string name);
-    // retrieves a stored sader
-    static Shader    GetShader(std::string name);
+Shader ResourceManager::GetShader(string name){
+    return Shaders[name];
+}
 
-    // loads texture from file
-    static Texture2D LoadTexture(const char *file, bool alpha, std::string name);
-    // retrieves a stored texture
-    static Texture2D GetTexture(std::string name);
+Texture2D ResourceManager::LoadTexture(const char*file, bool alpha, string name){
+    Textures[name] =  loadTextureFromFile(file, alpha);
+    return Textures[name];
+}
 
-    static void      Clear();
+Texture2D ResourceManager::GetTexture(string name){
+    return Textures[name];
+}
 
-private:
-    ResourceManager() { }
-    static Shader    loadShaderFromFile(const char *vShaderFile, const char *fShaderFile, const char *gShaderFile = nullptr);
-    static Texture2D loadTextureFromFile(const char *file, bool alpha);
-};
+void ResourceManager::Clear(){
+    for (auto iter : Shaders)
+        glDeleteProgram(iter.second.ID);
+    for (auto iter : Textures)
+        glDeleteTextures(1, &iter.second.ID);
+}
 
-#endif
+Shader ResourceManager::loadShaderFromFile(const char *vShaderFile, const char *fShaderFile, const char *gShaderFile){
+    string vertexCode;
+    string fragmentCode;
+    string geometryCode;
+
+    try{
+        ifstream vertexShaderFile(vShaderFile);
+        ifstream fragmentShaderFile(fShaderFile);
+
+        stringstream vShaderStream, fShaderStream;
+        // reader file's buffer contents into stream
+        vShaderStream << vertexShaderFile.rdbuf();
+        fShaderStream << fragmentShaderFile.rdbuf();
+
+        // convert stream into string
+        vertexCode = vShaderStream.str();
+        fragmentCode = fShaderStream.str();
+
+        if (gShaderFile != nullptr){
+            ifstream geometryShaderFile(gShaderFile);
+            stringstream gShaderStream;
+            gShaderStream << geometryShaderFile.rdbuf();
+            geometryShaderFile.close();
+            geometryCode = gShaderStream.str();
+        }
+    }
+    catch (exception e){
+        cout << "ERROR::SHADER Failed to read shader files" << endl;
+    }
+    const char *vShaderCode = vertexCode.c_str();
+    const char *fShaderCode = fragmentCode.c_str();
+    const char *gShaderCode = geometryCode.c_str();
+
+    // shader object
+    Shader shader;
+    shader.Compile(vShaderCode, fShaderCode, gShaderFile!=nullptr ? gShaderCode : nullptr);
+    return shader;
+}
+
+
+Texture2D ResourceManager::loadTextureFromFile(const char *file, bool alpha){
+    Texture2D texture;
+    if (alpha){
+        texture.Internal_Format = GL_RGBA;
+        texture.Image_Format = GL_RGBA;
+    }
+
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load(file, &width, &height, &nrChannels, 0);
+    texture.Generate(width, height, data);
+    stbi_image_free(data);
+    return texture;
+}
