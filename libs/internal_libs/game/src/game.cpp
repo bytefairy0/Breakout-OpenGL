@@ -13,10 +13,7 @@ BallObject *Ball;
 ParticleGenerator *Particles;
 
 Game::Game(unsigned int width, unsigned int height) 
-    : State(GAME_ACTIVE), Keys(), Width(width), Height(height)
-{ 
-
-}
+    : State(GAME_ACTIVE), Keys(), Width(width), Height(height) {}
 
 Game::~Game()
 {
@@ -67,7 +64,7 @@ void Game::Init()
     // game objects
     glm::vec2 playerPos = glm::vec2(this->Width / 2.0f - PLAYER_SIZE.x / 2.0f, this->Height - PLAYER_SIZE.y);
     Player = new GameObject(playerPos, PLAYER_SIZE, ResourceManager::GetTexture("paddle"));
-    
+
     glm::vec2 ballPos = playerPos + glm::vec2(PLAYER_SIZE.x / 2.0f - BALL_RADIUS, -BALL_RADIUS * 2.0f);
     Ball = new BallObject(ballPos, BALL_RADIUS, INITIAL_BALL_VELOCITY, ResourceManager::GetTexture("face"));
 }
@@ -89,7 +86,7 @@ void Game::ProcessInput(float dt)
     {
         float velocity = PLAYER_VELOCITY * dt;
         // move playerboard
-        if (this->Keys[GLFW_KEY_A])
+        if (this->Keys[GLFW_KEY_A] || this->Keys[GLFW_KEY_LEFT])
         {
             if (Player->Position.x >= 0.0f){
                 Player->Position.x -= velocity;
@@ -97,7 +94,7 @@ void Game::ProcessInput(float dt)
                     Ball->Position.x -= velocity;
             }
         }
-        if (this->Keys[GLFW_KEY_D])
+        if (this->Keys[GLFW_KEY_D] || this->Keys[GLFW_KEY_RIGHT])
         {
             if (Player->Position.x <= this->Width - Player->Size.x){
                 Player->Position.x += velocity;
@@ -107,6 +104,10 @@ void Game::ProcessInput(float dt)
             if (this->Keys[GLFW_KEY_SPACE])
                 Ball->Stuck = false;
         }
+        if (this->Keys[GLFW_KEY_SPACE])
+            Ball->Stuck = false;
+        if (Ball->Stuck)
+            Ball->Position = Player->Position + glm::vec2(PLAYER_SIZE.x / 2.0f - BALL_RADIUS, -BALL_RADIUS * 2.0f);
     }
 }
 
@@ -120,6 +121,8 @@ void Game::Render()
     Player->Draw(*Renderer);
     // draw ball
     Ball->Draw(*Renderer);
+    // draw particles
+    Particles->Draw();
 }
 
 void Game::ResetLevel()
