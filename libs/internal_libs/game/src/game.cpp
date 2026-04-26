@@ -3,12 +3,14 @@
 #include <sprite_renderer.h>
 #include <game_object.h>
 #include <ball_object.h>
+#include "particle_generator.h"
 
 using namespace std;
 
 SpriteRenderer *Renderer;
 GameObject *Player;
 BallObject *Ball;
+ParticleGenerator *Particles;
 
 Game::Game(unsigned int width, unsigned int height) 
     : State(GAME_ACTIVE), Keys(), Width(width), Height(height)
@@ -21,12 +23,14 @@ Game::~Game()
     delete Renderer;
     delete Player;
     delete Ball;
+    delete Particles;
 }
 
 void Game::Init()
 {
    // load shaders
-   ResourceManager::LoadShader("src/sprite.vs", "src/sprite.fs", nullptr, "sprite");
+   ResourceManager::LoadShader("apps/shaders/sprite.vs", "apps/shaders/sprite.fs", nullptr, "sprite");
+   ResourceManager::LoadShader("apps/shaders/particle.vs", "apps/shaders/particle.fs", nullptr, "particle");
 
    // configure shaders
    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(this->Width), 
@@ -34,19 +38,26 @@ void Game::Init()
     ResourceManager::GetShader("sprite").Use().SetInteger("image", 0);
     ResourceManager::GetShader("sprite").SetMatrix4("projection", projection);
 
-    Renderer = new SpriteRenderer(ResourceManager::GetShader("sprite"));
+    ResourceManager::GetShader("particle").Use().SetInteger("sprite", 0);
+    ResourceManager::GetShader("particle").SetMatrix4("projection", projection);
+
     // load texture
-    ResourceManager::LoadTexture("resources/awesomeface.png", true, "face");
-    ResourceManager::LoadTexture("resources/background.jpg", false, "background");
-    ResourceManager::LoadTexture("resources/block.png", false, "block");
-    ResourceManager::LoadTexture("resources/block_solid.png", false, "block_solid");
-    ResourceManager::LoadTexture("resources/paddle.png", true, "paddle");
+    ResourceManager::LoadTexture("apps/textures/awesomeface.png", true, "face");
+    ResourceManager::LoadTexture("apps/textures/background.jpg", false, "background");
+    ResourceManager::LoadTexture("apps/textures/block.png", false, "block");
+    ResourceManager::LoadTexture("apps/textures/block_solid.png", false, "block_solid");
+    ResourceManager::LoadTexture("apps/textures/paddle.png", true, "paddle");
+    ResourceManager::LoadTexture("apps/textures/particle.png", true, "particle");
+
+    Renderer = new SpriteRenderer(ResourceManager::GetShader("sprite"));
+    Particles = new ParticleGenerator(ResourceManager::GetShader("particle"), ResourceManager::GetTexture("particle"), 100);
+
     
     // load levels
-    GameLevel one; one.Load("resources/one.lvl", this->Width, this->Height / 2);
-    GameLevel two; two.Load("resources/two.lvl", this->Width, this->Height / 2);
-    GameLevel three; three.Load("resources/three.lvl", this->Width, this->Height / 2);
-    GameLevel four; four.Load("resources/four.lvl", this->Width, this->Height / 2);
+    GameLevel one; one.Load("apps/levels/one.lvl", this->Width, this->Height / 2);
+    GameLevel two; two.Load("apps/levels/two.lvl", this->Width, this->Height / 2);
+    GameLevel three; three.Load("apps/levels/three.lvl", this->Width, this->Height / 2);
+    GameLevel four; four.Load("apps/levels/four.lvl", this->Width, this->Height / 2);
     this->Levels.push_back(one);
     this->Levels.push_back(two);
     this->Levels.push_back(three);
@@ -56,6 +67,7 @@ void Game::Init()
     // game objects
     glm::vec2 playerPos = glm::vec2(this->Width / 2.0f - PLAYER_SIZE.x / 2.0f, this->Height - PLAYER_SIZE.y);
     Player = new GameObject(playerPos, PLAYER_SIZE, ResourceManager::GetTexture("paddle"));
+    
     glm::vec2 ballPos = playerPos + glm::vec2(PLAYER_SIZE.x / 2.0f - BALL_RADIUS, -BALL_RADIUS * 2.0f);
     Ball = new BallObject(ballPos, BALL_RADIUS, INITIAL_BALL_VELOCITY, ResourceManager::GetTexture("face"));
 }
